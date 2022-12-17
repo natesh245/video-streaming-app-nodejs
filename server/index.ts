@@ -60,32 +60,14 @@ app.get("/videos", (req: Request, res: Response) => {
   });
 });
 
-app.get("/page", (req: Request, res: Response) => {
-  res.sendFile(__dirname + "/index.html");
-});
-
-app.get("/video", (req: Request, res: Response) => {
-  const range = req.headers.range;
-  if (!range) {
-    return res.status(400).send("Range header is required");
-  }
-  console.log(range);
-  const videoPath =
-    __dirname + "/../assets/videos/pexels-olya-kobruseva-8943204.mp4";
-  const videoSize = fs.statSync(videoPath).size;
-  const CHUNK_SIZE = 10 ** 6; // 1MB
-  const start = Number(range.replace(/\D/g, ""));
-  const end = Math.min(start + CHUNK_SIZE, videoSize - 1);
-  const contentLength = end - start + 1;
-  const headers = {
-    "Content-Range": `bytes ${start}-${end}/${videoSize}`,
-    "Accept-Ranges": "bytes",
-    "Content-Length": contentLength,
-    "Content-Type": "video/mp4",
-  };
-  res.writeHead(206, headers);
-  const videoStream = fs.createReadStream(videoPath, { start, end });
-  videoStream.pipe(res);
+app.get("/videos/:id", (req: Request, res: Response) => {
+  const id: string = req.params.id;
+  fs.readFile(videoDataPath, (err, data) => {
+    if (err) return res.status(500).send("Internal Server error");
+    const videos = JSON.parse(data.toString());
+    const video = videos.find((video: any) => video.id === id);
+    res.status(200).json(video);
+  });
 });
 
 app.listen(PORT, () => {
