@@ -8,10 +8,12 @@ const fs_1 = __importDefault(require("fs"));
 const multer_1 = __importDefault(require("multer"));
 const uuid_1 = require("uuid");
 const PORT = 4000;
+const videosPath = `${__dirname}/../assets/videos`;
+const videoDataPath = `${__dirname}/../data/videos.json`;
 const app = (0, express_1.default)();
 const storage = multer_1.default.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, `${__dirname}/../assets/videos`);
+        cb(null, videosPath);
     },
     filename: function (req, file, cb) {
         const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
@@ -27,7 +29,7 @@ app.post("/videos/upload", upload.single("video"), (req, res) => {
         return res.status(400).send("Expecting video in mp4 format");
     const id = (0, uuid_1.v4)();
     const videoMetaData = Object.assign({ id }, file);
-    fs_1.default.readFile(`${__dirname}/../data/videos.json`, (err, videojsonbuffer) => {
+    fs_1.default.readFile(videoDataPath, (err, videojsonbuffer) => {
         if (err)
             return res.status(500).send(err);
         const videoJSON = videojsonbuffer.toString();
@@ -40,6 +42,14 @@ app.post("/videos/upload", upload.single("video"), (req, res) => {
         });
     });
     return res.status(200).send("Video uploaded successfully");
+});
+app.get("/videos", (req, res) => {
+    fs_1.default.readFile(videoDataPath, (err, data) => {
+        if (err)
+            return res.status(500).send("Internal server error");
+        const videos = JSON.parse(data.toString());
+        res.status(200).json(videos);
+    });
 });
 app.get("/page", (req, res) => {
     res.sendFile(__dirname + "/index.html");

@@ -3,11 +3,13 @@ import fs from "fs";
 import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
 const PORT: number = 4000;
+const videosPath = `${__dirname}/../assets/videos`;
+const videoDataPath = `${__dirname}/../data/videos.json`;
 
 const app: Express = express();
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, `${__dirname}/../assets/videos`);
+    cb(null, videosPath);
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
@@ -32,7 +34,7 @@ app.post(
       id,
       ...file,
     };
-    fs.readFile(`${__dirname}/../data/videos.json`, (err, videojsonbuffer) => {
+    fs.readFile(videoDataPath, (err, videojsonbuffer) => {
       if (err) return res.status(500).send(err);
       const videoJSON = videojsonbuffer.toString();
       const videos = JSON.parse(videoJSON);
@@ -49,6 +51,14 @@ app.post(
     return res.status(200).send("Video uploaded successfully");
   }
 );
+
+app.get("/videos", (req: Request, res: Response) => {
+  fs.readFile(videoDataPath, (err, data) => {
+    if (err) return res.status(500).send("Internal server error");
+    const videos = JSON.parse(data.toString());
+    res.status(200).json(videos);
+  });
+});
 
 app.get("/page", (req: Request, res: Response) => {
   res.sendFile(__dirname + "/index.html");
