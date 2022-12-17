@@ -5,10 +5,41 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const fs_1 = __importDefault(require("fs"));
+const multer_1 = __importDefault(require("multer"));
+const uuid_1 = require("uuid");
 const PORT = 4000;
 const app = (0, express_1.default)();
-app.get("/hello", (req, res) => {
-    res.send("Hello");
+const storage = multer_1.default.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, `${__dirname}/../assets/videos`);
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+        cb(null, file.fieldname + "-" + uniqueSuffix + ".mp4");
+    },
+});
+const upload = (0, multer_1.default)({ storage });
+app.post("/videos/upload", upload.single("video"), (req, res) => {
+    const file = req.file;
+    if (!file)
+        return res.status(400).send("Bad Request: Video File is madatory");
+    if (file.mimetype != "video/mp4")
+        return res.status(400).send("Expecting video in mp4 format");
+    const id = (0, uuid_1.v4)();
+    const videoMetaData = Object.assign({ id }, file);
+    fs_1.default.readFile(`${__dirname}/../data/videos.json`, (err, videojsonbuffer) => {
+        if (err)
+            return res.status(500).send(err);
+        const videoJSON = videojsonbuffer.toString();
+        const videos = JSON.parse(videoJSON);
+        console.log(videos);
+        videos.push(videoMetaData);
+        fs_1.default.writeFile(`${__dirname}/../data/videos.json`, JSON.stringify(videos), (err) => {
+            if (err)
+                return res.status(500).send(err);
+        });
+    });
+    return res.status(200).send("Video uploaded successfully");
 });
 app.get("/page", (req, res) => {
     res.sendFile(__dirname + "/index.html");
@@ -19,7 +50,7 @@ app.get("/video", (req, res) => {
         return res.status(400).send("Range header is required");
     }
     console.log(range);
-    const videoPath = __dirname + "/../assets/videos/pexels-ana-benet-8242842.mp4";
+    const videoPath = __dirname + "/../assets/videos/pexels-olya-kobruseva-8943204.mp4";
     const videoSize = fs_1.default.statSync(videoPath).size;
     const CHUNK_SIZE = 10 ** 6; // 1MB
     const start = Number(range.replace(/\D/g, ""));
